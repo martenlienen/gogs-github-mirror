@@ -44,6 +44,11 @@ class Gogs:
         response = requests.get(url, auth=(self.user, self.password))
         return response.json()["id"]
 
+    def org_id(self, org_name):
+        url = "{}/api/v1/orgs/{}".format(self.base_url, org_name)
+        response = requests.get(url, auth=(self.user, self.password))
+        return response.json()["id"]
+
     def mirror(self, owner_id, repo):
         url = "{}/api/v1/repos/migrate".format(self.base_url)
         body = {
@@ -65,6 +70,7 @@ def main():
     parser.add_argument("--gogs-url", required=True, help="gogs server URL")
     parser.add_argument("--gogs-user", required=True, help="gogs user")
     parser.add_argument("--gogs-pass", help="gogs password")
+    parser.add_argument("--gogs-org", help="Gogs organization to mirror to")
     parser.add_argument("--with-forks", type=bool, help="Mirror forks")
     args = parser.parse_args()
 
@@ -73,6 +79,7 @@ def main():
     gogs_url = args.gogs_url
     gogs_user = args.gogs_user
     gogs_pass = args.gogs_pass
+    gogs_org = args.gogs_org
     with_forks = args.with_forks
 
     if not gh_pass:
@@ -90,9 +97,16 @@ def main():
     if not with_forks:
         repos = [r for r in repos if not r["fork"]]
 
-    # Set up the mirrors
     gogs = Gogs(gogs_url, gogs_user, gogs_pass)
-    gogs_id = gogs.user_id()
+
+    if gogs_org:
+        print("Mirror to organization {}".format(gogs_org))
+        gogs_id = gogs.org_id(gogs_org)
+    else:
+        print("Mirror to user {}".format(gogs_user))
+        gogs_id = gogs.user_id()
+
+    # Set up the mirrors
     for repo in repos:
         response = gogs.mirror(gogs_id, repo)
         if response.status_code == 201:
@@ -100,7 +114,8 @@ def main():
         elif response.status_code == 500:
             print("Repository {} already exists".format(repo["name"]))
         else:
-            print("Unknown error {} for repo {}".format(response.status_code, repo["name"]))
+            print("Unknown error {} for repo {}".format(
+                response.status_code, repo["name"]))
 
 
 if __name__ == "__main__":
