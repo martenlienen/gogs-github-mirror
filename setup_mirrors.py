@@ -40,13 +40,13 @@ class Gogs:
         self.token = token
 
     def user_id(self):
-        url = "{}/api/v1/user".format(self.base_url)
+        url = f"{self.base_url}/api/v1/user"
         params = {"token": self.token}
         response = requests.get(url, params=params)
         return response.json()["id"]
 
     def org_id(self, org_name):
-        url = "{}/api/v1/orgs/{}".format(self.base_url, org_name)
+        url = f"{self.base_url}/api/v1/orgs/{org_name}"
         params = {"token": self.token}
         response = requests.get(url, params=params)
         return response.json()["id"]
@@ -103,22 +103,21 @@ def main():
     gogs = Gogs(gogs_url, gogs_user, gogs_token)
 
     if gogs_org:
-        print("Mirror to organization {}".format(gogs_org))
+        print(f"Mirror to organization {gogs_org}")
         gogs_id = gogs.org_id(gogs_org)
     else:
-        print("Mirror to user {}".format(gogs_user))
+        print(f"Mirror to user {gogs_user}")
         gogs_id = gogs.user_id()
 
     # Set up the mirrors
     for repo in repos:
         response = gogs.mirror(gogs_id, repo)
         if response.status_code == 201:
-            print("Mirror for {} set up".format(repo["name"]))
+            print(f"Mirror for {repo['name']} set up")
         elif response.status_code == 500:
-            print("Repository {} already exists".format(repo["name"]))
+            print(f"Repository {repo['name']} already exists")
         else:
-            print("Unknown error {} for repo {}".format(
-                response.status_code, repo["name"]))
+            print(f"Unknown error {response.status_code} for repo {repo['name']}")
 
 
 if __name__ == "__main__":
